@@ -1,0 +1,71 @@
+---
+title: "Assignment01"
+author: "Erik Fichter"
+date: "9/8/2020"
+output: html_document
+---
+
+```{r load libraries}
+library(tidycensus)
+library(tidyverse)
+library(knitr)
+```
+# Variables used:
+I decided to explore the housing value in relation to the place of work. In order to understand the relation I focused on the following variables. Geographically I focused on Massachusetts as it is the area in the United States I am most familiar with. The source of the data is from https://www.census.gov/:
+
+  1. Value of the property (continuous): VALP
+  
+  2. Amount and type of units within the structure (categorical): BLD
+  
+  3. Number of bedrooms (continuous): BDSP
+  
+  4. Travel time to work (continuous): JWMNP
+  
+  5. Means of transportation (categorical): JWTR
+
+```{r load person-level microdata variables}
+person_vars_2018 <- pums_variables %>%
+  distinct(year, survey, var_code, var_label, data_type, level) %>%
+  filter(level == "person", year == 2018, survey == "acs1")
+```
+
+```{r}
+hh_vars_2018 <- pums_variables %>%
+  distinct(year, survey, var_code, 
+           var_label, data_type, level) %>%
+  filter(level == "housing", year == 2018, survey == "acs1")
+```
+
+```{r}
+area_vars_2018 <- load_variables(2018, "acs1")
+```
+
+```{r}
+hh_data <- get_pums(variables = c("VALP", 
+                                  "BLD",
+                                  "BDSP",
+                                  "JWMNP",
+                                  "JWTR"),
+                    
+                        state = "MA", 
+                        year = 2018, 
+                        survey = "acs1",
+                        recode = TRUE) %>%
+
+filter(VALP > 0) %>%
+filter(JWMNP > 0) %>%
+
+
+select(VALP, BLD_label, BDSP, JWMNP, JWTR_label)
+
+                    
+
+knitr::kable(hh_data[1:10,])                
+  
+
+```
+
+
+```{r}
+hh_data
+```
