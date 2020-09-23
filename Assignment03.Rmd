@@ -1,0 +1,209 @@
+---
+title: "Assignment03"
+author: "Erik Fichter"
+date: "9/19/2020"
+output: html_document
+---
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+
+
+## Analysis for correlation between residential buildings (value, type, size etc) and commute time to work
+
+
+
+```{r Loading Data, results='hide', message=FALSE}
+
+ma_re_trans_data<- read.csv("2018 RE Transportation.csv")
+ma_re_trans_data
+
+```
+
+
+
+
+# Correlation between two continuous variables - Pearson’s correlation
+
+## Property Value (Con) and Traveltime (Con)
+
+While the correlation between property value and traveltime is weak, it is statistically significant. 
+
+```{r}
+correlation <- cor.test(ma_re_trans_data$VALP, ma_re_trans_data$JWMNP)
+
+correlation
+```
+
+As seen in the figure, this positive correlation means that as value increases, traveltime grows.
+
+```{r}
+ggplot(ma_re_trans_data, aes(x = VALP, y = JWMNP)) +
+  geom_point(size = 0.5, alpha = 0.25, position = "jitter") +
+  geom_smooth() +
+  theme_bw() +
+  scale_x_continuous(name = "Value of Property (USD)") +
+  scale_y_continuous(name = "Traveltime (minutes)", 
+                     breaks = seq(0, 6000, by = 10),
+                     labels = paste("", 
+                      prettyNum(seq(0, 6000, by = 10),
+                      big.mark = ","))) +
+  annotate(geom = "text", x = 0, y = 200, 
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation$conf.int[1], digits = 2), 
+                         "to",
+                         prettyNum(correlation$conf.int[2], digits = 2)),
+           hjust = 0)
+```
+
+
+## Nuber of Bedrooms (Con) and Traveltime (Con)
+
+While the correlation between bedrooms and traveltime is weak, it is statistically significant. 
+
+```{r}
+correlation2 <- cor.test(ma_re_trans_data$BDSP, ma_re_trans_data$JWMNP)
+
+correlation2
+```
+
+As seen in the figure, this very small but positive correlation means that as the number of bedrooms increase, traveltime grows. A reason for that might be that bigger homes are further away from the CBD and office hubs as they are more affordable in the outskirts. 
+
+```{r}
+ggplot(ma_re_trans_data, aes(x = BDSP, y = JWMNP)) +
+  geom_point(size = 0.5, alpha = 0.25, position = "jitter") +
+  geom_smooth() +
+  theme_bw() +
+  scale_x_continuous(name = "Number of Bedrooms") +
+  scale_y_continuous(name = "GTraveltime (minutes)", 
+                     breaks = seq(0, 6000, by = 10),
+                     labels = paste("", 
+                      prettyNum(seq(0, 6000, by = 10),
+                      big.mark = ","))) +
+  annotate(geom = "text", x = 0, y = 200, 
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation$conf.int[1], digits = 2), 
+                         "to",
+                         prettyNum(correlation$conf.int[2], digits = 2)),
+           hjust = 0)
+```
+
+# Gross Monthly Rent (Con) and Traveltime (Con)
+
+There is no critical correlation between Gross Monthly Rent and Traveltime to work. WHY ???
+
+```{r}
+correlation <- cor.test(ma_re_trans_data$GRNTP, ma_re_trans_data$JWMNP)
+
+correlation
+```
+
+```{r}
+ggplot(ma_re_trans_data, aes(x = GRNTP, y = JWMNP)) +
+  geom_point(size = 0.5, alpha = 0.25, position = "jitter") +
+  geom_smooth() +
+  theme_bw() +
+  scale_x_continuous(name = "Monthly Rent") +
+  scale_y_continuous(name = "Traveltime (minutes)", 
+                     breaks = seq(0, 6000, by = 10),
+                     labels = paste("", 
+                      prettyNum(seq(0, 6000, by = 10),
+                      big.mark = ","))) +
+  annotate(geom = "text", x = 0, y = 200, 
+           label = paste("Correlation (95-percent confidence):",
+                         prettyNum(correlation$conf.int[1], digits = 2), 
+                         "to",
+                         prettyNum(correlation$conf.int[2], digits = 2)),
+           hjust = 0)
+```
+
+
+# Relationship between a continuous variable and categorical variable with more than two levels - Analysis of Variance (ANOVA)
+
+## Type of Structure (Cat) and Traveltime (Con)
+
+The ANOVA indicates that with a p value less than .1, there is a significant relationship between the type of structure and the traveltime to work.
+
+```{r}
+anova <- aov(JWMNP ~ BLD_label, data = ma_re_trans_data)
+
+summary(anova)
+```
+Since this relationship is statistically significant, I'll run a Tukey's HSD test to see the magnitude of differences among the difference category, followed by a boxplot to visualize the differences.
+
+```{r}
+differences <- TukeyHSD(anova)
+
+as_tibble(cbind(pair = row.names(differences$BLD_label),
+                differences$BLD_label))
+```
+The boxplot allows for an easy understanding of how the means and overall distribution of traveltime differs from each the type of building.
+
+```{r}
+ggplot(ma_re_trans_data, aes(x = BLD_label, y = JWMNP)) +
+  geom_boxplot() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_x_discrete(name = "Type of structure") +
+  scale_y_continuous(name = "Traveltime to Work", 
+                     breaks = seq(0, 1000, by = 10),
+                     labels = paste("", 
+                                    prettyNum(seq(0, 1000, by = 10),
+                                              big.mark = ","))) 
+```
+
+
+## Means of Transportation (Cat) and Traveltime (Con)
+
+The ANOVA indicates that with a p value less than .1, there is a significant relationship between the type of structure and the traveltime to work.
+
+```{r}
+anova <- aov(JWMNP ~ JWTR_label, data = ma_re_trans_data)
+
+summary(anova)
+```
+```{r}
+differences <- TukeyHSD(anova)
+
+as_tibble(cbind(pair = row.names(differences$JWTR_label),
+                differences$JWTR_label))
+```
+```{r}
+ggplot(ma_re_trans_data, aes(x = JWTR_label, y = JWMNP)) +
+  geom_boxplot() +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45)) +
+  scale_x_discrete(name = "Means of Transportation") +
+  scale_y_continuous(name = "Traveltime to Work", 
+                     breaks = seq(0, 1000, by = 20),
+                     labels = paste("", 
+                                    prettyNum(seq(0, 1000, by = 20),
+                                              big.mark = ","))) 
+```
+
+
+# Relationship between two categorical variables - Chi-square test
+
+## Type of Structure (Cat) and Transportation Type (Cat)
+
+
+```{r}
+chi_sq <- chisq.test(ma_re_trans_data$BLD_label, ma_re_trans_data$JWTR_label != "Car, truck, or van") 
+
+chi_sq
+```
+little to no correlation
+
+
+```{r}
+observation <- chi_sq
+observation
+```
+
+```{r}
+expectation <- chi_sq
+expectation
+```
+
