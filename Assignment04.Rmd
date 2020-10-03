@@ -1,0 +1,97 @@
+---
+title: "Assignment 04"
+author: "Erik Fichter"
+date: "9/24/2020"
+output: html_document
+---
+
+```{r, message = FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r Loading Data, results='hide', message=FALSE}
+
+ma_re_trans_data<- read.csv("2018 RE Transportation.csv")%>%
+  
+  mutate(struct_type = case_when(
+    BLD_label=="2 Apartments" ~ "LT_10_apts",
+    BLD_label=="10-19 Apartments" ~ "TenTo49apts",
+    BLD_label=="One-family house detached" ~ "1SFhome",
+    BLD_label=="3-4 Apartments" ~ "LT_10_apts",
+    BLD_label=="Mobile home or trailer" ~ "MH_veh",
+    BLD_label=="50 or more apartments" ~ "GT_49_apts",
+    BLD_label=="20-49 Apartments" ~ "TenTo49apts",
+    BLD_label=="5-9 Apartments" ~ "LT_10_apts",
+    BLD_label=="One-family house attached" ~ "1SFhome",
+    BLD_label=="Boat, RV, van, etc." ~ "MH_veh")) %>%
+
+mutate(struct_type = case_when(
+    JWTR_label=="Bus or trolley bus " ~ "Bus",
+    JWTR_label=="Car, truck, or van" ~ "Car",
+    JWTR_label=="Ferryboat" ~ "Ferry",
+    JWTR_label=="Motorcycle" ~ "Motorcycle",
+    JWTR_label=="Other method" ~ "Others",
+    JWTR_label=="Railroad" ~ "Railroad",
+    JWTR_label=="Streetcar or trolley car (carro publico in Puerto Rico)" ~ "Streetcar",
+    JWTR_label=="Subway or elevated" ~ "Subway",
+    JWTR_label=="Taxicab" ~ "Taxi",
+    JWTR_label=="Walked" ~ "By Foot")) 
+  
+ma_re_trans_data
+
+```
+## Linear Regression Model 
+
+Dependent Variable: Value of the property (continuous)
+
+**Independent Variables: 
+
+1) Gross Monthly Rent (continuous): GRNTP
+
+2) Amount and type of units within the structure (categorical): BLD
+
+3) Number of bedrooms (continuous): BDSP
+
+4) Travel time to work (continuous): JWMNP
+
+5) Means of transportation (categorical): JWTR
+
+  
+```{r run the regression}
+options(scipen = 999)
+model <- lm(VALP ~ GRNTP + BLD_label + BDSP + JWMNP + JWTR_label, data = ma_re_trans_data)
+
+summary(model)
+```
+
+### Linear Regression Interpretation
+It has a multiple R-squared value 0.09279 , meaning under 12% of the variation in property value is explained by the independent variables in my model. 
+
+## Gross Monthly Rent
+office hour to be arranged
+
+
+## Amount and type of units within the structure
+For Amount and type of units within the structure, each type is compared to the value of the property. The results above indicate that the coefficients for every mode of transportation except for 2 Apartments (0.78), One-family house attached (0.05), One-family house detached (0.56) are statistically significant at the 95% confidence level because they all have p-values of less than 0.05. The reasons for those categories might be because the for smaller type of houses both the property area as well as the attractivness of the neighborhood differs greatly so that within the same category the value range is huge; we therefore cannot say with 95% confidence that the vale of properties that are 2 Apartments , One-family house attached, One-family house detached differs to the rest of the transportation types, holding all other variables constant, even though this is what the coefficient would suggest.
+
+The model suggests that, holding all other variables constant, if a property hosts apartment buildings between 3 and 50, the property value ranges on average between the different types around 30000. If the property hold more than 50 apartments its value is on average around 150000 more compared to the previous type. If the property holds mobile homes of trailers the property price drops on average by 500000 compared to the property with 50 or more apartments. Lastly, if the property holds a boat or van to life the property value explodes by having 4 mio more than the 50+ apartment property. This more me is hard to explain, especially given that I my understanding lifing in a van is considered being illegal. Lifing in a boat could however link to a wealthy owner of a large property with lake/river or sea connection. For the rest of the oberservations the property value has increased with rising numbers of apartments. That might mean that the denser the building the closer to the city and therefore with higher value. For that reason it might be interesting looking at the proximity to the CBD. 
+
+
+## Number of bedrooms  
+
+The model suggests that for every additional bedroom within a household, the property value increases on average by approximatly 140000 USD, holding all other variables constant. This would mean that larger types of houses (eg detached house in comparison to a apartment building) have a higher value. This result is however conterintuitive to the previous observation with the type of structure. This coefficient is statistically significant at the 95% confidence level.
+
+
+## Travel time to work 
+
+The model suggests that for every additional minute of commute time, the property value increases on average by approximatly 350 USD, holding all other variables constant. This would also support that property further away from the working hubs are increasing in value. This coefficient is statistically significant at the 95% confidence level.
+
+
+## Mode of Transportation
+For mode of transportation, each mode is compared to the value of the property. The results above indicate that the coefficients for every mode of transportation except for by trolley car (0.2), Ferryboat (0.7), Taxicab (0.9) are statistically significant at the 95% confidence level because they all have p-values of less than 0.05. Likely because the sample size for those commuters is so small, the p-value is above .05; we therefore cannot say with 95% confidence that the vale of properties that use either Trolley car, Ferryboat or Taxicab differs to the rest of the transportation types, holding all other variables constant, even though this is what the coefficient would suggest.
+
+The model suggests that, holding all other variables constant, if a person takes the car to work, their property value is approxematly 100000 less than a property that uses either bus or railroad to work. If they use the subway, holding all other variables constant, their property value will be on average 200000 more on average than the property value of someone using a car. If the commuter goes by foot, their property value will also be on average 200000 more on average than the property value of someone using a car. There are likely other variable interactions going on here that have yet to be examined. For example, people taking the car likely live further away from the cities and working hubs and have therefore smaller property values than within the city and the other way around if people go by foot or use the subway it is more likely that they life in the city with higher property prices; distance from occupation and distance from CBD would be a useful variable to include.
+
+
+
