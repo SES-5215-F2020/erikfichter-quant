@@ -1,0 +1,163 @@
+---
+title: "Assignment05"
+author: "Erik Fichter"
+date: "10/3/2020"
+output: html_document
+---
+
+```{r message=FALSE, results='hide'}
+library(tidycensus)
+library(tidyverse)
+library(jtools)
+library(interactions)
+library(huxtable)
+
+```
+
+The scope of mutating both categorical variables is to set the focus more narrow, in order to differentiate for the building type between a house, small, medium and large Apartment buildings and for the transportation mode to reduce the categories to the car, Subway, by foot and others.
+
+```{r Loading Data, results='hide', message=FALSE}
+
+ma_re_trans_data<- read.csv("2018 RE Transportation.csv")%>%
+  
+  mutate(struct_type = case_when(
+    BLD_label=="2 Apartments" ~ "House",
+    BLD_label=="10-19 Apartments" ~ "Medium Apartment Building",
+    BLD_label=="One-family house detached" ~ "House",
+    BLD_label=="3-4 Apartments" ~ "Small Apartment Building",
+    BLD_label=="Mobile home or trailer" ~ "Other",
+    BLD_label=="50 or more apartments" ~ "Large Apartment Building",
+    BLD_label=="20-49 Apartments" ~ "Large Apartment Building",
+    BLD_label=="5-9 Apartments" ~ "Small Apartment Building",
+    BLD_label=="One-family house attached" ~ "House",
+    BLD_label=="Boat, RV, van, etc." ~ "Other")) %>%
+
+mutate(transp_type = case_when(
+    JWTR_label=="Bus or trolley bus " ~ "Car",
+    JWTR_label=="Car, truck, or van" ~ "Car",
+    JWTR_label=="Ferryboat" ~ "Others",
+    JWTR_label=="Motorcycle" ~ "Others",
+    JWTR_label=="Other method" ~ "Others",
+    JWTR_label=="Railroad" ~ "Others",
+    JWTR_label=="Streetcar or trolley car (carro publico in Puerto Rico)" ~ "Others",
+    JWTR_label=="Subway or elevated" ~ "Subway",
+    JWTR_label=="Taxicab" ~ "Car",
+    JWTR_label=="Walked" ~ "ByFoot")) 
+  
+ma_re_trans_data
+
+```
+## Linear Regression Model 
+
+Dependent Variable: Value of the property (continuous)
+
+**Independent Variables: 
+
+1) Gross Monthly Rent (continuous): GRNTP
+
+2) Amount and type of units within the structure (categorical): struct_type
+
+3) Number of bedrooms (continuous): BDSP
+
+4) Travel time to work (continuous): JWMNP
+
+5) Means of transportation (categorical): transp_type
+
+
+## Original Linear Regression
+
+Below is the linear regression I ran last week. The dependent variable is the Value of the Property. The independent variables are Gross Monthly Rent, Type of Structure, Number of bedrooms, Travel time to work and Means of transportation. 
+
+I dont know why the Categories "House" and "ByFoot" dont appear.
+  
+```{r run the regression1}
+options(scipen = 999)
+model1 <- lm(VALP ~ GRNTP + struct_type + BDSP + JWMNP + transp_type, data = ma_re_trans_data)
+
+summary(model1)
+
+```
+
+
+# Log Transformation
+
+The difference between traveling 5 minutes to work and 10 minutes is probably more substantial than the difference between earning 60 minutes and and 65 minutes travel time. Therefore I will log-transform my traveltime variable.
+
+```{r run the regression2}
+options(scipen = 999)
+model2 <- lm(VALP ~ GRNTP + struct_type + log(JWMNP) + BDSP + transp_type, data = ma_re_trans_data)
+
+summary(model2)
+
+```
+## Adding an interaction term
+
+
+```{r run the regression3}
+options(scipen = 999)
+model3 <- lm(VALP ~ GRNTP:BDSP + struct_type:BDSP + BDSP + JWMNP:BDSP + transp_type:BDSP, data = ma_re_trans_data)
+
+summary(model3)
+
+```
+
+```{r run the regression4}
+options(scipen = 999)
+model4 <- lm(VALP ~ GRNTP:JWMNP + struct_type:JWMNP + JWMNP + BDSP:JWMNP + transp_type:JWMNP, data = ma_re_trans_data)
+
+summary(model4)
+
+```
+
+
+##Visualizing model fit
+
+It shows that the original values and the one with the log transformation as statistically more significant than the ones with an interaction.
+
+```{r}
+ModelFit <- tibble(model = c(1, 2, 3,4),
+                   R_square = c(summary(model1)$adj.r.squared,
+                                summary(model2)$adj.r.squared,
+                                summary(model3)$adj.r.squared,
+                                summary(model4)$adj.r.squared))
+ggplot(ModelFit, aes(x = model, y = R_square)) +
+  geom_line() +
+  scale_x_continuous(name = "",
+                   breaks = breaks <- seq(1, 4, by = 1),
+                   labels = paste("Model", breaks)) +
+  scale_y_continuous(name = "Adjusted R-squared value") +
+  theme_bw()
+```
+
+```{r}
+coeff_names <- c(1, 2, 3)
+                 
+
+export_summs(model1, model2, model3,
+             error_format = "(p = {p.value})",
+             error_pos = "same",
+             coefs = coeff_names)
+```
+
+
+```{r}
+options(scipen = 999)
+interact_plot(model3, pred = VALP, modx = JWTR_label, interval = TRUE) +
+  scale_x_continuous(name = "Property Value",
+                     limits = c(0, 3000),
+                     breaks = breaks <- seq(0, 3000, by = 500),
+                      labels = paste("$", 
+                                    prettyNum(breaks, big.mark = ","),
+                                    sep = ""))+
+  scale_y_continuous(name = "Commute Time",
+                     limits = c(0, 100000),
+                     breaks = breaks <- seq(0, 100000, by = 10000),
+                      labels = paste("$", 
+                                    prettyNum(breaks, big.mark = ","),
+                                    sep = ""))+
+  scale_color_discrete(name = "") +
+  scale_linetype_discrete(name = "") +
+  scale_fill_discrete(name = "") 
+```
+
+
